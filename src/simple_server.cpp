@@ -4,18 +4,29 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <atomic>
 
 #include "simple_server.h"
 
-HTTPServer::HTTPServer(int port) : port(port), server_fd(-1) {
+std::atomic<int> should_stop = false;
+
+SimpleServer::SimpleServer() : server_fd(-1) {
     routes["/"] = "Hello, World!";
 }
 
-void HTTPServer::start() {
+SimpleServer::~SimpleServer() {
+    close(server_fd);
+}
+
+void SimpleServer::stop() {
+    should_stop = true;
+}
+
+void SimpleServer::run() {
     struct sockaddr_in address;
     int addrlen = sizeof(address);
 
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+    if ((server_fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == 0) {
         std::cerr << "Failed to create socket" << std::endl;
         return;
     }
@@ -36,10 +47,9 @@ void HTTPServer::start() {
 
     std::cout << "Server listening on port " << port << std::endl;
 
-    while (true) {
+    while (!should_stop) {
         int client_socket;
         if ((client_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
-            std::cerr << "Failed to accept connection" << std::endl;
             continue;
         }
 
@@ -48,7 +58,7 @@ void HTTPServer::start() {
     }
 }
 
-void HTTPServer::handle_connection(int client_socket) {
+void SimpleServer::handle_connection(int client_socket) {
     char buffer[1024] = {0};
     read(client_socket, buffer, 1024);
 
@@ -64,7 +74,7 @@ void HTTPServer::handle_connection(int client_socket) {
     }
 }
 
-void HTTPServer::send_response(int client_socket, const std::string& content, int status_code) {
+void SimpleServer::send_response(int client_socket, const std::string& content, int status_code) {
     std::string status_text = (status_code == 200) ? "OK" : "Not Found";
     std::string content_type = "text/plain";
 
@@ -78,10 +88,4 @@ void HTTPServer::send_response(int client_socket, const std::string& content, in
 
     std::string response = response_stream.str();
     send(client_socket, response.c_str(), response.length(), 0);
-}
-
-int main() {
-    HTTPServer server(8080);
-    server.start();
-    return 0;
 }

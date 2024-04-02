@@ -9,6 +9,9 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
+#include "server.h"
+#include "simple_server.h"
+
 const int PORT = 8080;
 const std::string SERVER_ADDRESS = "127.0.0.1";
 const int NUM_THREADS = 100;
@@ -35,8 +38,9 @@ void sendRequests() {
             continue;
         }
 
-        const char* request = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+        const char* request = "GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n";
         send(sock, request, strlen(request), 0);
+        shutdown(sock, SHUT_WR);
 
         char buffer[1024] = {0};
         if (recv(sock, buffer, sizeof(buffer), 0) > 0) {
@@ -50,6 +54,12 @@ void sendRequests() {
 }
 
 int main() {
+    HTTPServer server;
+    // SimpleServer server;
+    std::thread server_thread([&server]{
+        server.run();
+    });
+
     std::vector<std::thread> threads;
     auto start_time = std::chrono::high_resolution_clock::now();
 
@@ -74,6 +84,9 @@ int main() {
     std::cout << "Failed requests: " << failed_requests << "\n";
     std::cout << "Time taken: " << seconds << " seconds\n";
     std::cout << "Requests per second: " << requests_per_second << "\n";
+
+    server.stop();
+    server_thread.join();
 
     return 0;
 }

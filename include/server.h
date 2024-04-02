@@ -22,20 +22,15 @@ class HTTPServer {
 public:
     HTTPServer(int port = 8080);
     ~HTTPServer();
+    void stop();
 
     void run();
 
 private:
-    void setupServerSocket();
-    void handleClient(int client_socket);
-    void addToEpoll(int fd);
-
     int server_fd;
     struct sockaddr_in address;
     const int PORT;
-    int epoll_fd;
-    static constexpr int MAX_EVENTS = 64;
-    ThreadPool thread_pool;
     FileCache file_cache;
     HTTPMethodHandler method_handler;
+    ThreadPool thread_pool;
 };

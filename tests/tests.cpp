@@ -39,6 +39,7 @@ std::string sendRequest(const std::string& method, const std::string& path, cons
 
     std::string request_str = request.str();
     send(sock, request_str.c_str(), request_str.length(), 0);
+    shutdown(sock, SHUT_WR);
 
     char buffer[4096] = {0};
     std::string response;

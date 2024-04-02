@@ -7,42 +7,44 @@
 #include <condition_variable>
 #include <functional>
 #include <future>
+#include <sys/epoll.h>
+#include <netinet/in.h>
+#include <iostream>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <cstring>
+#include <cassert>
+
+#include "http_method_handler.h"
+
+#define MAX_EVENTS 1024
+
+class Worker {
+public:
+    Worker(HTTPMethodHandler *method_handler);
+    ~Worker();
+    void add_fd(int fd);
+private:
+    void read_msg(int fd);
+    void handle_client(int fd);
+
+    std::thread thread;
+    int epoll_fd, num_fds = 0;
+    std::vector<int> fd_buf;
+    std::mutex fd_buf_mut;
+    std::condition_variable fd_buf_cv;
+    std::unordered_map<int, std::string> client_buf;
+    HTTPMethodHandler *method_handler;
+    bool stop = false;
+};
 
 class ThreadPool {
 public:
-    ThreadPool(size_t threads);
-    template<class F, class... Args>
-    auto enqueue(F&& f, Args&&... args) 
-        -> std::future<typename std::result_of<F(Args...)>::type>;
-    ~ThreadPool();
+    ThreadPool(HTTPMethodHandler *method_handler, int threadpool_size);
+    void delegate_client(int fd);
 private:
-    std::vector<std::thread> workers;
-    std::queue<std::function<void()>> tasks;
-    
-    std::mutex queue_mutex;
-    std::condition_variable condition;
-    bool stop;
+    int threadpool_size, next_worker = 0;
+    std::vector<std::unique_ptr<Worker>> workers;
 };
-
-template<class F, class... Args>
-auto ThreadPool::enqueue(F&& f, Args&&... args) 
-    -> std::future<typename std::result_of<F(Args...)>::type>
-{
-    using return_type = typename std::result_of<F(Args...)>::type;
-
-    auto task = std::make_shared< std::packaged_task<return_type()> >(
-            std::bind(std::forward<F>(f), std::forward<Args>(args)...)
-        );
-        
-    std::future<return_type> res = task->get_future();
-    {
-        std::unique_lock<std::mutex> lock(queue_mutex);
-
-        if(stop)
-            throw std::runtime_error("enqueue on stopped ThreadPool");
-
-        tasks.emplace([task](){ (*task)(); });
-    }
-    condition.notify_one();
-    return res;
-}

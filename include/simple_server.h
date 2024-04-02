@@ -3,13 +3,15 @@
 #include <string>
 #include <unordered_map>
 
-class HTTPServer {
+class SimpleServer {
 public:
-    HTTPServer(int port);
-    void start();
+    SimpleServer();
+    ~SimpleServer();
+    void run();
+    void stop();
 
 private:
-    int port;
+    int port = 8080;
     int server_fd;
     std::unordered_map<std::string, std::string> routes;
 

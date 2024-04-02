@@ -3,7 +3,7 @@
 FileCache::FileCache(size_t max_size) : max_size(max_size), current_size(0) {}
 
 std::string FileCache::get(const std::string& path) {
-    std::lock_guard<std::mutex> lock(cache_mutex);
+    std::shared_lock<std::shared_mutex> lock(cache_mutex);
     auto it = cache.find(path);
     if (it != cache.end()) {
         it->second.last_access = std::chrono::steady_clock::now();
@@ -13,7 +13,7 @@ std::string FileCache::get(const std::string& path) {
 }
 
 void FileCache::put(const std::string& path, const std::string& content) {
-    std::lock_guard<std::mutex> lock(cache_mutex);
+    std::unique_lock<std::shared_mutex> lock(cache_mutex);
     
     while (current_size + content.size() > max_size && !cache.empty()) {
         evict();

@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_map>
 #include <mutex>
+#include <shared_mutex>
 #include <chrono>
 #include <algorithm>
 #include <fstream>
@@ -21,7 +22,7 @@ private:
     };
 
     std::unordered_map<std::string, CacheEntry> cache;
-    std::mutex cache_mutex;
+    std::shared_mutex cache_mutex;
     size_t max_size;
     size_t current_size;
 

@@ -8,16 +8,16 @@ add_library(Sources ${SOURCES})
 
 # add_executable(Cpp-web-server ${SOURCES})
 
-add_executable(server "main.cpp")
-add_executable(simple "simple_server.cpp")
+add_executable(main "main.cpp")
+# add_executable(simple "simple_server.cpp")
 add_executable(tests "tests/tests.cpp")
 add_executable(bench "tests/benchmark.cpp")
 
-target_link_libraries(server Sources)
-target_link_libraries(simple Sources)
+target_link_libraries(main Sources)
+# target_link_libraries(simple Sources)
 target_link_libraries(tests Sources)
 target_link_libraries(bench Sources)
-set_target_properties(server simple tests bench PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin")
+set_target_properties(main tests bench PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin")
 
 include(CTest)
 enable_testing()
